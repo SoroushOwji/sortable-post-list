@@ -1,52 +1,81 @@
 # sortable-post-list
 
-This template should help get you started developing with Vue 3 in Vite.
+![Alt Text](./preview.gif)
 
-## Recommended IDE Setup
+## Setup
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+This project is initiated with vue cli and vite. it includes support for typescript and uses vitest as the testing library.
 
-## Type Support for `.vue` Imports in TS
+## why typescript?
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+This comes to my take on "testing". For me, it is the thing you set up to know "what" went wrong or better said prevent you from shipping something that might go wrong. With that in mind having something like typescript yelling at me for simple problems makes a lot of sense. This way I won't have to check if the input of the tested function is right, simple things like that.
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+## Where is the store?
 
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+There is no store in this project. As it is a small one and a few global states can handle the whole thing.
 
-## Customize configuration
+## The Time Travel (aka elephant in the room)
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+There is no doubt that the most special part of this small project is the "Time Travel" section. without that, we just have a pretty list of items getting reordered.
 
-## Project Setup
+As I saw this as an opportunity to shine, I gave it some thought and found a few solutions. I will explain them below:
 
-```sh
-npm install
+### The simple array
+
+The first option coming to mind is using an array adding each snapshot (let's call each post list order a snapshot from now on) to it and rendering it on the page. The newest should come at the top, this will mean all of the items will re-render each time a new snapshot is created. we don't have a choice in that. this is the design. However instead of using `shift` and `unshift`, that can get very expensive computations, like mogul's (people that don't know the magic that is css). I can make the array work with `push` and `pop` and show them in reverse order.
+
+Not the best most innovative of the solutions. However a classic recipe.
+
+### The linked list
+
+This has more finesse to it. Each snapshot itself contains a link to the next snapshot, the beauty of it is, by putting one `link.next` to `null`, you basically get rid of all the newer snapshots. and the cost of it is only a simple assignment. creating a new snapshot is also very easy. I would just need to track the last link somewhere. Not a big deal.
+So it would look something like this:
+
+```jsx
+// TimeTravelList.vue
+<time-travel-item
+    @time-travel="handleTimeTravel"
+    :time-travel="first"
+></time-travel-item>
 ```
 
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
+```jsx
+// TimeTravelItem.vue
+<div>
+    <div>{{ timeTravel.text }}</div>
+    <button @click="handleTimeTravel">
+        Time travel
+    </button>
+</div>
+<time-travel-item
+    v-if="timeTravel.next != null"
+    :timeTravel="timeTravel.next"
+    @time-travel="handleTimeTravelFromChild"
+></time-travel-item>
 ```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
+```ts
+// types.ts
+export type TimeTravel = {
+  next: TimeTravel | null;
+  order: number[];
+  id: string;
+  text: string;
+};
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+Up until this point, this solution seemed very compelling but there are two problems first clicking on each node should delete itself too, so I will need a two-way linked list for this. if having a linked list for this project was not over-engineering, a two-way linked list definitely is.
 
-```sh
-npm run test:unit
-```
+The second problem is that the vue built-in `<transition-group />` relies on its children keys and I would like to use that for some smooth and easy animations.
 
-### Lint with [ESLint](https://eslint.org/)
+### What goes in the Memory?
 
-```sh
-npm run lint
-```
+The first solution that comes to mind is to record the whole `order` of the items. for a list of 5 items and an order that is just keeping 5 numbers it is not the end of the world.
+
+A nicer solution might be keeping the `diff`. Like git does. and then for each time travel, I would have to go from the beginning of the list and apply the changes one by one.
+
+In my opinion, this is good when memory is a constraint and computation power is not so much. again, in the case of having only five items, this is over-engineering. Therefore I am going to go simple and record the whole state:
+
+> Solve a problem when I have a problem
+
+Overthinking and over-engineering are always hiding in the corner.
