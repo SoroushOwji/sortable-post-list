@@ -79,3 +79,7 @@ In my opinion, this is good when memory is a constraint and computation power is
 > Solve a problem when I have a problem
 
 Overthinking and over-engineering are always hiding in the corner.
+
+Dear reviewer, I have to say that I have not touched vue for more than a year and most of my experience with it is pre composition api. I guess I am trying to say, I will get better very fast!
+
+Cheers!
